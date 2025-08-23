@@ -1,138 +1,296 @@
 package net.depression.network;
 
 import dev.architectury.networking.NetworkManager;
-import io.netty.buffer.Unpooled;
 import net.depression.Depression;
 import net.depression.rhythmcraft.ProfileDataType;
 import net.depression.rhythmcraft.RhythmCraftProfile;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 public class RhythmCraftPacket {
-    public static final ResourceLocation READ_CHART_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_read_chart_packet");
-    public static final ResourceLocation READY_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_ready_packet");
-    public static final ResourceLocation PLAY_SONG_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_play_song_packet");
-    public static final ResourceLocation PROFILE_REQUEST_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_profile_request_packet");
-    public static final ResourceLocation PROFILE_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_profile_packet");
-    public static final ResourceLocation ACCEPT_EDIT_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_accept_edit_packet");
-    public static final ResourceLocation NOTE_CHANGE_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_note_change_packet");
-    public static final ResourceLocation PAUSE_CHANGE_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_pause_packet");
-    public static final ResourceLocation PROGRESS_CHANGE_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_progress_change_packet");
-    public static final ResourceLocation GAMEPLAY_CHANGE_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_gameplay_change_packet");
-    public static final ResourceLocation SPACE_CHANGE_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_space_change_packet");
-    public static final ResourceLocation TIME_CHANGE_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_time_change_packet");
-    public static final ResourceLocation GAME_END_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_game_end_packet");
-    public static final ResourceLocation LOAD_BACK_PACKET = new ResourceLocation(Depression.MOD_ID, "rc_load_back_packet");
+    public record ReadChartPayload(String songId, int difficulty, boolean isEditMode) implements CustomPacketPayload {
+        public static final Type<ReadChartPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_read_chart_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, ReadChartPayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.STRING_UTF8, ReadChartPayload::songId,
+                ByteBufCodecs.INT, ReadChartPayload::difficulty,
+                ByteBufCodecs.BOOL, ReadChartPayload::isEditMode,
+                ReadChartPayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record ReadyPayload() implements CustomPacketPayload {
+        public static final Type<ReadyPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_ready_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, ReadyPayload> CODEC = StreamCodec.unit(new ReadyPayload());
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record PlaySongPayload(String id) implements CustomPacketPayload {
+        public static final Type<PlaySongPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_play_song_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, PlaySongPayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.STRING_UTF8, PlaySongPayload::id,
+                PlaySongPayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record ProfileRequestPayload() implements CustomPacketPayload {
+        public static final Type<ProfileRequestPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_profile_request_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, ProfileRequestPayload> CODEC = StreamCodec.unit(new ProfileRequestPayload());
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record ProfileUpdatePayload(String dataType, String sortType, int difficulty, int index, String chartKey, ArrayList<Integer> scores) implements CustomPacketPayload {
+        public static final Type<ProfileUpdatePayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "profile_update_packet"));
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, ProfileUpdatePayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.STRING_UTF8, ProfileUpdatePayload::dataType,
+                ByteBufCodecs.STRING_UTF8, ProfileUpdatePayload::sortType,
+                ByteBufCodecs.INT, ProfileUpdatePayload::difficulty,
+                ByteBufCodecs.INT, ProfileUpdatePayload::index,
+                ByteBufCodecs.STRING_UTF8, ProfileUpdatePayload::chartKey,
+                ByteBufCodecs.collection(ArrayList::new, ByteBufCodecs.INT), ProfileUpdatePayload::scores,
+                ProfileUpdatePayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record AcceptEditPayload() implements CustomPacketPayload {
+        public static final Type<AcceptEditPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_accept_edit_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, AcceptEditPayload> CODEC = StreamCodec.unit(new AcceptEditPayload());
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record NoteChangedPayload(BlockPos pos, boolean isAdd) implements CustomPacketPayload {
+        public static final Type<NoteChangedPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_note_change_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, NoteChangedPayload> CODEC = StreamCodec.composite(
+                BlockPos.STREAM_CODEC, NoteChangedPayload::pos,
+                ByteBufCodecs.BOOL, NoteChangedPayload::isAdd,
+                NoteChangedPayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record PauseChangedPayload(long tick) implements CustomPacketPayload {
+        public static final Type<PauseChangedPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_pause_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, PauseChangedPayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_LONG, PauseChangedPayload::tick,
+                PauseChangedPayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record ProgressChangedPayload(long tick) implements CustomPacketPayload {
+        public static final Type<ProgressChangedPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_progress_change_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, ProgressChangedPayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_LONG, ProgressChangedPayload::tick,
+                ProgressChangedPayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record TimeChangedPayload(long tick) implements CustomPacketPayload {
+        public static final Type<TimeChangedPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_time_change_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, TimeChangedPayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_LONG, TimeChangedPayload::tick,
+                TimeChangedPayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record GameplayChangePayload(int score, int combo) implements CustomPacketPayload {
+        public static final Type<GameplayChangePayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_gameplay_change_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, GameplayChangePayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.INT, GameplayChangePayload::score,
+                ByteBufCodecs.INT, GameplayChangePayload::combo,
+                GameplayChangePayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record GameEndPayload(int score, int hits, int prevBest) implements CustomPacketPayload {
+        public static final Type<GameEndPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_game_end_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, GameEndPayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.INT, GameEndPayload::score,
+                ByteBufCodecs.INT, GameEndPayload::hits,
+                ByteBufCodecs.INT, GameEndPayload::prevBest,
+                GameEndPayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record LoadBackPayload() implements CustomPacketPayload {
+        public static final Type<LoadBackPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_load_back_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, LoadBackPayload> CODEC = StreamCodec.unit(new LoadBackPayload());
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    public record SpaceChangePayload(int space) implements CustomPacketPayload {
+        public static final Type<SpaceChangePayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "rc_space_change_packet"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, SpaceChangePayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.INT, SpaceChangePayload::space,
+                SpaceChangePayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
 
     public static void sendReadChart(String songId, int difficulty, boolean isEditMode) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeInt(songId.length());
-        buf.writeCharSequence(songId, StandardCharsets.UTF_8);
-        buf.writeInt(difficulty);
-        buf.writeBoolean(isEditMode);
-        NetworkManager.sendToServer(READ_CHART_PACKET, buf);
+        NetworkManager.sendToServer(new ReadChartPayload(songId, difficulty, isEditMode));
     }
+
     public static void sendReady() {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        NetworkManager.sendToServer(READY_PACKET, buf);
+        NetworkManager.sendToServer(new ReadyPayload());
     }
+
     public static void sendPlaySong(ServerPlayer player, String id) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeCharSequence(id, StandardCharsets.UTF_8);
-        NetworkManager.sendToPlayer(player, PLAY_SONG_PACKET, buf);
+        NetworkManager.sendToPlayer(player, new PlaySongPayload(id));
     }
+
     public static void sendProfileRequest() {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        NetworkManager.sendToServer(PROFILE_REQUEST_PACKET, buf);
+        NetworkManager.sendToServer(new ProfileRequestPayload());
     }
+
     public static void sendProfileS2C(RhythmCraftProfile profile, ServerPlayer player) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeInt(profile.sortType.name().length());
-        buf.writeCharSequence(profile.sortType.name(), StandardCharsets.UTF_8);
-        buf.writeInt(profile.difficulty);
-        buf.writeInt(profile.index);
+        String charKey = "";
+        ArrayList<Integer> scores = new ArrayList<>();
         for (String key : profile.chartScores.keySet()) {
-            buf.writeInt(key.length());
-            buf.writeCharSequence(key, StandardCharsets.UTF_8);
-            ArrayList<Integer> scores = profile.chartScores.get(key);
-            buf.writeInt(scores.size());
-            for (int score : scores) {
-                buf.writeInt(score);
-            }
+            charKey = key;
+            scores.addAll(profile.chartScores.get(key));
         }
-        NetworkManager.sendToPlayer(player, PROFILE_PACKET, buf);
+
+        NetworkManager.sendToPlayer(player, new ProfileUpdatePayload(
+                "",
+                profile.sortType.name(),
+                profile.difficulty,
+                profile.index,
+                charKey,
+                scores
+        ));
     }
+
     public static void sendProfileUpdateC2S(RhythmCraftProfile profile, ProfileDataType type) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeInt(type.name().length());
-        buf.writeCharSequence(type.name(), StandardCharsets.UTF_8);
+        String sortType = "";
+        int difficulty = 0;
+        int index = 0;
+
         switch (type) {
             case SORT_TYPE:
-                buf.writeInt(profile.sortType.name().length());
-                buf.writeCharSequence(profile.sortType.name(), StandardCharsets.UTF_8);
+                sortType = profile.sortType.name();
                 break;
             case DIFFICULTY:
-                buf.writeInt(profile.difficulty);
+                difficulty = profile.difficulty;
                 break;
             case INDEX:
-                buf.writeInt(profile.index);
+                index = profile.index;
                 break;
         }
-        NetworkManager.sendToServer(PROFILE_PACKET, buf);
+
+        NetworkManager.sendToServer(new ProfileUpdatePayload(
+                type.name(),
+                sortType,
+                difficulty,
+                index,
+                "",
+                new ArrayList<>()
+        ));
     }
+
     public static void sendAcceptEdit(ServerPlayer player) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        NetworkManager.sendToPlayer(player, ACCEPT_EDIT_PACKET, buf);
+        NetworkManager.sendToPlayer(player, new AcceptEditPayload());
     }
 
     public static void sendNoteChange(ServerPlayer player, BlockPos pos, boolean isAdd) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeBlockPos(pos);
-        buf.writeBoolean(isAdd);
-        NetworkManager.sendToPlayer(player, NOTE_CHANGE_PACKET, buf);
+        NetworkManager.sendToPlayer(player, new NoteChangedPayload(pos, isAdd));
     }
+
     public static void sendPauseChange(long tick) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeLong(tick);
-        NetworkManager.sendToServer(PAUSE_CHANGE_PACKET, buf);
+        NetworkManager.sendToServer(new PauseChangedPayload(tick));
     }
+
     public static void sendProgressChange(long tick) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeLong(tick);
-        NetworkManager.sendToServer(PROGRESS_CHANGE_PACKET, buf);
+        NetworkManager.sendToServer(new ProgressChangedPayload(tick));
     }
+
     public static void sendTimeChange(ServerPlayer player, long tick) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeLong(tick);
-        NetworkManager.sendToPlayer(player, TIME_CHANGE_PACKET, buf);
+        NetworkManager.sendToPlayer(player, new TimeChangedPayload(tick));
     }
+
     public static void sendGameplayChange(ServerPlayer player, int score, int combo) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeInt(score);
-        buf.writeInt(combo);
-        NetworkManager.sendToPlayer(player, GAMEPLAY_CHANGE_PACKET, buf);
+        NetworkManager.sendToPlayer(player, new GameplayChangePayload(score, combo));
     }
 
     public static void sendGameEnd(ServerPlayer player, int score, int hits, int prevBest) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeInt(score);
-        buf.writeInt(hits);
-        buf.writeInt(prevBest);
-        NetworkManager.sendToPlayer(player, GAME_END_PACKET, buf);
+        NetworkManager.sendToPlayer(player, new GameEndPayload(score, hits, prevBest));
     }
 
     public static void sendLoadBack() {
-        NetworkManager.sendToServer(LOAD_BACK_PACKET, new FriendlyByteBuf(Unpooled.buffer()));
+        NetworkManager.sendToServer(new LoadBackPayload());
     }
 
     public static void sendSpaceChange(ServerPlayer player, int space) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeInt(space);
-        NetworkManager.sendToPlayer(player, SPACE_CHANGE_PACKET, buf);
+        NetworkManager.sendToPlayer(player, new SpaceChangePayload(space));
     }
 }

@@ -7,7 +7,6 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import com.sun.jdi.connect.Connector;
 import net.depression.mental.MentalStatus;
 import net.depression.mental.MentalTrait;
 import net.depression.network.MentalStatusPacket;
@@ -15,7 +14,6 @@ import net.depression.network.RhythmCraftPacket;
 import net.depression.rhythmcraft.PlayingChart;
 import net.depression.server.Registry;
 import net.depression.world.ParticleFormulaInstance;
-import net.minecraft.client.particle.FireworkParticles;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -26,16 +24,10 @@ import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleType;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.commands.ParticleCommand;
-import net.minecraft.server.commands.SetBlockCommand;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.projectile.FireworkRocketEntity;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoublePlantBlock;
-import net.minecraft.world.level.block.SaplingBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.CommandBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -548,7 +540,7 @@ public class CommandRegistrationListener {
             Registry.particles.computeIfAbsent(playingChart.player.getStringUUID(), k -> new LinkedList<>()).add(instance);
         }
         else {
-            Registry.particles.computeIfAbsent(level.dimensionTypeId().location().toString(), k -> new LinkedList<>()).add(instance);
+            Registry.particles.computeIfAbsent(level.dimension().location().toString(), k -> new LinkedList<>()).add(instance);
         }
         return 0;
     }

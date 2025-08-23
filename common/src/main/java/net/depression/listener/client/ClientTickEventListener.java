@@ -1,17 +1,14 @@
 package net.depression.listener.client;
 
 import com.mojang.datafixers.util.Pair;
-import net.depression.Depression;
 import net.depression.client.ClientMentalIllness;
 import net.depression.client.ClientMentalStatus;
 import net.depression.client.ClientPTSDManager;
 import net.depression.client.DepressionClient;
-import net.depression.client.rhythmcraft.ClientPlayingChart;
 import net.depression.mixin.client.MouseHandlerInvoker;
 import net.depression.screen.ComputerScreen;
 import net.depression.screen.MentalTraitSelectionScreen;
 import net.depression.screen.UncloseableScreen;
-import net.depression.screen.rhythmcraft.RCMainScreen;
 import net.depression.sound.ModSounds;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
@@ -59,7 +56,7 @@ public class ClientTickEventListener {
         ClientPTSDManager ptsdManager = mentalStatus.ptsdManager;
         Player player = Minecraft.getInstance().player;
         long curTick = clientLevel.getGameTime();
-        String dimensionID = Minecraft.getInstance().level.dimensionTypeId().location().toString();
+        String dimensionID = Minecraft.getInstance().level.dimension().location().toString();
         ConcurrentLinkedDeque<Pair<Entity, Long>> falseEntities = ClientPTSDManager.falseEntities.get(dimensionID);
         if (falseEntities != null) {
             falseEntities.removeIf(pair -> curTick - pair.getSecond() > 400);
@@ -92,6 +89,12 @@ public class ClientTickEventListener {
             if (DepressionClient.oggStreamPlayer.isPlaying) {
                 DepressionClient.oggStreamPlayer.stop();
             }
+        }
+
+        if (minecraft.screen instanceof UncloseableScreen) return;
+        if (DepressionClient.playingChart != null && !DepressionClient.playingChart.isPlaying && !DepressionClient.playingChart.isWaiting) {
+            System.out.println(123);
+            DepressionClient.playingChart = null;
         }
     }
 }

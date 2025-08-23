@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.depression.client.DepressionClient;
 import net.depression.client.rhythmcraft.ClientPlayingChart;
 import net.depression.mixin.rhythmcraft.BossHealthOverlayAccessor;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.entity.player.Player;
@@ -11,7 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import javax.swing.text.html.parser.Entity;
 
 public class GameGuiRenderer {
-    public static void renderHud(GuiGraphics guiGraphics, float v) {
+    public static void renderHud(GuiGraphics guiGraphics, DeltaTracker v) {
         if (DepressionClient.playingChart != null && DepressionClient.playingChart.isPlaying) {
             ClientPlayingChart playingChart = DepressionClient.playingChart;
             Minecraft minecraft = Minecraft.getInstance();
@@ -49,16 +50,16 @@ public class GameGuiRenderer {
             }
             if (minecraft.screen == null) {
                 if (playingChart.songProgressSlider != null) {
-                    playingChart.songProgressSlider.renderWidget(guiGraphics, 0, 0, v);
+                    playingChart.songProgressSlider.renderWidget(guiGraphics, 0, 0, v.getRealtimeDeltaTicks());
                 }
                 if (playingChart.pauseButton != null) {
-                    playingChart.pauseButton.renderWidget(guiGraphics, 0, 0, v);
+                    playingChart.pauseButton.renderWidget(guiGraphics, 0, 0, v.getRealtimeDeltaTicks());
                 }
                 if (playingChart.forwardButton != null) {
-                    playingChart.forwardButton.renderWidget(guiGraphics, 0, 0, v);
+                    playingChart.forwardButton.renderWidget(guiGraphics, 0, 0, v.getRealtimeDeltaTicks());
                 }
                 if (playingChart.backwardButton != null) {
-                    playingChart.backwardButton.renderWidget(guiGraphics, 0, 0, v);
+                    playingChart.backwardButton.renderWidget(guiGraphics, 0, 0, v.getRealtimeDeltaTicks());
                 }
             }
 

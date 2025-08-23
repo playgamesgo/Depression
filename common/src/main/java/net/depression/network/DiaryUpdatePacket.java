@@ -1,30 +1,37 @@
 package net.depression.network;
 
 import dev.architectury.networking.NetworkManager;
-import io.netty.buffer.Unpooled;
 import net.depression.Depression;
 import net.depression.item.diary.ConditionComponents;
 import net.depression.mental.MentalStatus;
 import net.depression.server.Registry;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-
 public class DiaryUpdatePacket {
-    public static final ResourceLocation DIARY_UPDATE_PACKET = new ResourceLocation(Depression.MOD_ID, "diary_update_packet");
-    public static Charset charset = StandardCharsets.UTF_8;
+    public record DiaryUpdatePayload(String content) implements CustomPacketPayload {
+        public static final Type<DiaryUpdatePayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "diary_update_packet"));
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, DiaryUpdatePayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.STRING_UTF8, DiaryUpdatePayload::content,
+                DiaryUpdatePayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
 
     public static void sendToServer(String content) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeCharSequence(content, charset);
-        NetworkManager.sendToServer(DIARY_UPDATE_PACKET, buf);
+        NetworkManager.sendToServer(new DiaryUpdatePayload(content));
     }
 
     public static void sendToPlayer(ServerPlayer player) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
         MentalStatus mentalStatus = Registry.mentalStatus.get(player.getUUID());
         double mentalHealthValue;
         if (mentalStatus == null) {
@@ -40,7 +47,7 @@ public class DiaryUpdatePacket {
                     + ConditionComponents.HEALTHY_1_BREED.get(player)
                     + ConditionComponents.HEALTHY_1_EAT.get(player)
                     + "\n    'diary.depression.healthy_1.2'"
-                    +ConditionComponents.HEALTHY_1_KILL_MOBS.get(player);
+                    + ConditionComponents.HEALTHY_1_KILL_MOBS.get(player);
         }
         else if (70 <= mentalHealthValue && mentalHealthValue < 85) { //健康2
             content = "    'diary.depression.healthy_2.1'\n    "
@@ -48,6 +55,13 @@ public class DiaryUpdatePacket {
                     + ConditionComponents.HEALTHY_2_WEATHER.get(player)
                     + ConditionComponents.HEALTHY_2_MOVE_IN_WEATHER.get(player)
                     + "\n    'diary.depression.healthy_2.2'";
+        }
+        else if (55 <= mentalHealthValue && mentalHealthValue < 70) { //轻度抑郁1
+            content = "    'diary.depression.mild_depression_1.1'\n    "
+                    + ConditionComponents.MILD_DEPRESSION_1_WEATHER.get(player)
+                    + ConditionComponents.MILD_DEPRESSION_1_MOVE_IN_WEATHER.get(player)
+                    + "\n    'diary.depression.mild_depression_1.2'"
+                    + ConditionComponents.MILD_DEPRESSION_1_MOVE.get(player);
         }
         else if (55 <= mentalHealthValue && mentalHealthValue < 70) { //轻度抑郁1
             content = "    'diary.depression.mild_depression_1.1'\n    "
@@ -97,7 +111,7 @@ public class DiaryUpdatePacket {
                         + "\n    'diary.depression.major_depressive_disorder_2.2'";
             }
         }
-        buf.writeCharSequence(content, charset);
-        NetworkManager.sendToPlayer(player, DIARY_UPDATE_PACKET, buf);
+
+        NetworkManager.sendToPlayer(player, new DiaryUpdatePayload(content));
     }
 }

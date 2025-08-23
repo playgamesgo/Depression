@@ -1,24 +1,35 @@
 package net.depression.network;
 
 import dev.architectury.networking.NetworkManager;
-import io.netty.buffer.Unpooled;
 import net.depression.Depression;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.nio.charset.StandardCharsets;
-
 public class MentalTraitPacket {
-    public static final ResourceLocation MENTAL_TRAIT_PACKET = new ResourceLocation(Depression.MOD_ID, "mental_trait_packet");
+
+    public record MentalTraitPayload(String id) implements CustomPacketPayload {
+        public static final Type<MentalTraitPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "mental_trait_packet"));
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, MentalTraitPayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.STRING_UTF8, MentalTraitPayload::id,
+                MentalTraitPayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     public static void sendToPlayer(ServerPlayer player) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        NetworkManager.sendToPlayer(player, MENTAL_TRAIT_PACKET, buf);
+        NetworkManager.sendToPlayer(player, new MentalTraitPayload(""));
     }
 
     public static void sendToServer(String id) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeCharSequence(id, StandardCharsets.UTF_8);
-        NetworkManager.sendToServer(MENTAL_TRAIT_PACKET, buf);
+        NetworkManager.sendToServer(new MentalTraitPayload(id));
     }
 }

@@ -1,31 +1,19 @@
 package net.depression.mixin.client;
 
-import net.depression.Depression;
 import net.depression.client.ClientMentalIllness;
 import net.depression.client.ClientMentalStatus;
 import net.depression.client.DepressionClient;
-import net.depression.client.rhythmcraft.ClientPlayingChart;
 import net.depression.listener.client.ClientTickEventListener;
-import net.depression.network.RhythmCraftPacket;
-import net.depression.screen.MentalTraitInfoScreen;
 import net.depression.screen.UncloseableScreen;
-import net.depression.util.OggStreamPlayer;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.sounds.SoundEvents;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Mixin(KeyboardHandler.class)
 public abstract class KeyboardHandlerMixin {

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.datafixers.util.Pair;
 import dev.architectury.networking.NetworkManager;
 import net.depression.Depression;
+import net.depression.network.PTSDOnsetPacket;
 import net.depression.sound.ModSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -44,13 +45,13 @@ public class ClientPTSDManager {
     private final Random random = new Random();
     public static ConcurrentHashMap<String, ConcurrentLinkedDeque<Pair<Entity, Long>>> falseEntities = new ConcurrentHashMap<>();
 
-    public static final ResourceLocation PTSD_ONSET_LEFT = new ResourceLocation(Depression.MOD_ID, "textures/symptom/ptsd_onset_left.png");
-    public static final ResourceLocation PTSD_ONSET_RIGHT = new ResourceLocation(Depression.MOD_ID, "textures/symptom/ptsd_onset_right.png");
-    public static final ResourceLocation PTSD_ONSET_UP = new ResourceLocation(Depression.MOD_ID, "textures/symptom/ptsd_onset_up.png");
-    public void receivePTSDOnsetPacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
-        int level = buf.readInt();
+    public static final ResourceLocation PTSD_ONSET_LEFT = ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "textures/symptom/ptsd_onset_left.png");
+    public static final ResourceLocation PTSD_ONSET_RIGHT = ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "textures/symptom/ptsd_onset_right.png");
+    public static final ResourceLocation PTSD_ONSET_UP = ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "textures/symptom/ptsd_onset_up.png");
+    public void receivePTSDOnsetPacket(PTSDOnsetPacket.PTSDOnsetPayload buf, NetworkManager.PacketContext packetContext) {
+        int level = buf.onsetLevel();
         if (level > 0) {
-            double distance = buf.readDouble();
+            double distance = buf.distance();
             heartBeatTick = (int) (10 + (distance / 24d * 10));
             heartBeatVolume = 0.5d + (24d - distance) / 24d * 0.5d;
         }
@@ -138,8 +139,8 @@ public class ClientPTSDManager {
         }
     }
 
-    public static void receivePhotismPacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
-        String id = buf.readUtf();
+    public static void receivePhotismPacket(PTSDOnsetPacket.PhotosmPayload buf, NetworkManager.PacketContext packetContext) {
+        String id = buf.id();
         EntityType.byString(id).ifPresent(entityType -> {
             Minecraft minecraft = Minecraft.getInstance();
             ClientLevel level = minecraft.level;
@@ -176,7 +177,7 @@ public class ClientPTSDManager {
                 mob.getLookControl().setLookAt(player, 0f, 0f);
                 mob.getMoveControl().setWantedPosition(player.getX(), player.getY(), player.getZ(), 0d);
             }
-            falseEntities.computeIfAbsent(level.dimensionTypeId().location().toString(), key -> new ConcurrentLinkedDeque<>())
+            falseEntities.computeIfAbsent(level.dimension().location().toString(), key -> new ConcurrentLinkedDeque<>())
                     .add(new Pair<>(entity, level.getGameTime()));
         });
     }

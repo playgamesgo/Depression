@@ -16,6 +16,8 @@ import net.minecraft.client.gui.screens.worldselection.ConfirmExperimentalFeatur
 import net.minecraft.client.gui.screens.worldselection.ExperimentsScreen;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerPlayer;
@@ -24,6 +26,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
@@ -54,14 +58,12 @@ public class BlockEventListener {
                 if (!cropBlock.isMaxAge(state)) {
                     return EventResult.pass();
                 }
-            }
-            else {
+            } else {
                 ItemStack item = player.getMainHandItem();
                 if (item.isEnchanted()) {
-                    for (Tag tag : item.getEnchantmentTags()) {
-                        if (tag.getAsString().contains("minecraft:silk_touch")) {
-                            return EventResult.pass();
-                        }
+                    if (item.getEnchantments().keySet().stream().anyMatch(enchantmentHolder ->
+                            enchantmentHolder.is(Enchantments.SILK_TOUCH))) {
+                        return EventResult.pass();
                     }
                 }
             }

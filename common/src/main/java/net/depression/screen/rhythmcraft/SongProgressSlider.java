@@ -1,8 +1,6 @@
 package net.depression.screen.rhythmcraft;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import com.mojang.blaze3d.platform.Window;
-import net.depression.Depression;
 import net.depression.network.RhythmCraftPacket;
 import net.depression.util.OggStreamPlayer;
 import net.minecraft.client.Minecraft;
@@ -10,14 +8,9 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.IOException;
-import java.util.Date;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 
 public class SongProgressSlider extends AbstractSliderButton {
     public double xScale;

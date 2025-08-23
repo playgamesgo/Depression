@@ -27,7 +27,7 @@ public class LifeCycleEventListener {
                 }
                 if (item instanceof TieredItem tieredItem) {
                     Tier tier = tieredItem.getTier();
-                    double value = 0.1 * Math.pow(tier.getLevel(), 3);
+                    double value = 0.1 * Math.pow(tier.getEnchantmentValue(), 3);
                     MentalStatus.lootHealItem.put(id, value);
                     for (ItemStack material : tier.getRepairIngredient().getItems()) {
                         String materialId = material.getItem().arch$registryName().toString();
@@ -37,11 +37,11 @@ public class LifeCycleEventListener {
                     }
                 }
                 if (item instanceof ArmorItem armorItem) {
-                    double value = 0.4 * armorItem.getDefense() + 0.2 * armorItem.getToughness() + 0.1 * armorItem.getMaterial().getKnockbackResistance();
+                    double value = 0.4 * armorItem.getDefense() + 0.2 * armorItem.getToughness() + 0.1 * armorItem.getMaterial().value().knockbackResistance();
                     MentalStatus.lootHealItem.put(id, value);
                 }
                 if (item instanceof ProjectileWeaponItem projectileWeaponItem) {
-                    double damage = projectileWeaponItem.getMaxDamage();
+                    double damage = projectileWeaponItem.getDefaultInstance().getMaxDamage();
                     if (damage > 5) {
                         double value = 0.2 * (damage - 5);
                         MentalStatus.lootHealItem.put(id, value);

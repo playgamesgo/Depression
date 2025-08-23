@@ -5,18 +5,15 @@ import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.architectury.networking.NetworkManager;
 import net.depression.Depression;
-import net.depression.client.screen.DiaryAccess;
+import net.depression.network.MentalStatusPacket;
 import net.depression.network.MentalTraitPacket;
-import net.depression.screen.MentalTraitSelectionScreen;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.BookViewScreen;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.FishingRodItem;
 
 public class ClientMentalStatus {
     public static int EMOTION_DISPLAY_OFFSET_X = -8;
@@ -34,7 +31,7 @@ public class ClientMentalStatus {
     public ClientPTSDManager ptsdManager = new ClientPTSDManager();
     public String mentalIllnessString;
     public final double mentalHealthMaxValue = 100d;
-    private static final ResourceLocation EMOTION = new ResourceLocation(Depression.MOD_ID, "textures/gui/emotion.png");
+    private static final ResourceLocation EMOTION = ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "textures/gui/emotion.png");
 
     public void reset() {
         emotionValue = 0d;
@@ -46,20 +43,20 @@ public class ClientMentalStatus {
         mentalIllnessString = "healthy";
     }
 
-    public static void receiveMentalTraitPacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void receiveMentalTraitPacket(MentalTraitPacket.MentalTraitPayload buf, NetworkManager.PacketContext packetContext) {
         isMentalTraitSelected = false;
     }
 
-    public void receiveEmotionPacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
-        emotionValue = buf.readDouble();
-        isInCombat = buf.readBoolean();
+    public void receiveEmotionPacket(MentalStatusPacket.EmotionPayload buf, NetworkManager.PacketContext packetContext) {
+        emotionValue = buf.emotionValue();
+        isInCombat = buf.inCombat();
         emotionLevel = getEmotionLevel();
         //Minecraft.getInstance().gui.setOverlayMessage(Component.literal(String.format("情绪值: %.2f 精神健康值: %.2f", emotionValue, mentalHealthValue)), false);
     }
-    public void receiveMentalHealthPacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
-        mentalHealthValue = buf.readDouble();
+    public void receiveMentalHealthPacket(MentalStatusPacket.MentalHealthPayload buf, NetworkManager.PacketContext packetContext) {
+        mentalHealthValue = buf.mentalHealthValue();
         int prevMentalHealthId = mentalHealthId;
-        mentalHealthId = buf.readInt();
+        mentalHealthId = buf.mentalHealthId();
         mentalIllnessString = getMentalIllness(mentalHealthId);
         if (isJoinGame) {
             isJoinGame = false;
@@ -78,12 +75,12 @@ public class ClientMentalStatus {
         }
     }
 
-    public void renderHud(GuiGraphics guiGraphics, float v) {
+    public void renderHud(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
 
         if (ClientDiaryUpdater.curDiaryItem != null) { //打开日记
-            minecraft.setScreen(new BookViewScreen(new DiaryAccess(ClientDiaryUpdater.curDiaryItem)));
+            //minecraft.setScreen(new BookViewScreen(DiaryAccess.fromDiary(ClientDiaryUpdater.curDiaryItem)));
             ClientDiaryUpdater.curDiaryItem = null;
         }
 

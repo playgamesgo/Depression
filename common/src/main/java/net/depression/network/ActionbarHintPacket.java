@@ -1,99 +1,147 @@
 package net.depression.network;
 
-import dev.architectury.networking.NetworkManager;
-import io.netty.buffer.Unpooled;
-import net.depression.Depression;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
+    import dev.architectury.networking.NetworkManager;
+    import net.depression.Depression;
+    import net.minecraft.network.RegistryFriendlyByteBuf;
+    import net.minecraft.network.chat.Component;
+    import net.minecraft.network.chat.ComponentSerialization;
+    import net.minecraft.network.codec.ByteBufCodecs;
+    import net.minecraft.network.codec.StreamCodec;
+    import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+    import net.minecraft.resources.ResourceLocation;
+    import net.minecraft.server.level.ServerPlayer;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+    public class ActionbarHintPacket {
 
-public class ActionbarHintPacket {
-    public static final ResourceLocation PTSD_FROM_PACKET = new ResourceLocation(Depression.MOD_ID, "ptsd_form_packet");
-    public static final ResourceLocation PTSD_DISPERSE_PACKET = new ResourceLocation(Depression.MOD_ID, "ptsd_disperse_packet");
-    public static final ResourceLocation PTSD_REMISSION_PACKET = new ResourceLocation(Depression.MOD_ID, "ptsd_remission_packet");
-    public static final ResourceLocation INSOMNIA_PACKET = new ResourceLocation(Depression.MOD_ID, "insomnia_packet");
-    public static final ResourceLocation MENTAL_FATIGUE_PACKET = new ResourceLocation(Depression.MOD_ID, "mental_fatigue_packet");
-    public static final ResourceLocation NEARBY_BLOCK_HEAL_PACKET = new ResourceLocation(Depression.MOD_ID, "nearby_block_heal_packet");
-    public static final ResourceLocation KILL_ENTITY_HEAL_PACKET = new ResourceLocation(Depression.MOD_ID, "kill_entity_heal_packet");
-    public static final ResourceLocation BREAK_BLOCK_HEAL_PACKET = new ResourceLocation(Depression.MOD_ID, "break_block_heal_packet");
-    public static final ResourceLocation FISH_HEAL_PACKET = new ResourceLocation(Depression.MOD_ID, "fish_heal_packet");
-    public static final ResourceLocation FEED_ANIMAL_HEAL_PACKET = new ResourceLocation(Depression.MOD_ID, "feed_animal_heal_packet");
-    public static final ResourceLocation PET_HEAL_PACKET = new ResourceLocation(Depression.MOD_ID, "pet_heal_packet");
-    public static final ResourceLocation LOOT_HEAL_PACKET = new ResourceLocation(Depression.MOD_ID, "loot_heal_packet");
-    public static final ResourceLocation BIPOLAR_PACKET = new ResourceLocation(Depression.MOD_ID, "bipolar_packet");
-    public static final ResourceLocation OVERDOSE_PACKET = new ResourceLocation(Depression.MOD_ID, "overdose_packet");
+        public record OverdosePayload(int count) implements CustomPacketPayload {
+            public static final Type<OverdosePayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "overdose_packet"));
+            public static final StreamCodec<RegistryFriendlyByteBuf, OverdosePayload> CODEC = StreamCodec.composite(
+                    ByteBufCodecs.INT, OverdosePayload::count,
+                    OverdosePayload::new
+            );
+            @Override
+            public Type<? extends CustomPacketPayload> type() { return TYPE; }
+        }
 
-    public static final Charset CHARSET = StandardCharsets.UTF_8;
+        public record BipolarPayload(boolean isMania) implements CustomPacketPayload {
+            public static final Type<BipolarPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "bipolar_packet"));
+            public static final StreamCodec<RegistryFriendlyByteBuf, BipolarPayload> CODEC = StreamCodec.composite(
+                    ByteBufCodecs.BOOL, BipolarPayload::isMania,
+                    BipolarPayload::new
+            );
+            @Override
+            public Type<? extends CustomPacketPayload> type() { return TYPE; }
+        }
 
-    public static void sendOverdosePacket(ServerPlayer player, int count) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeInt(count);
-        NetworkManager.sendToPlayer(player, OVERDOSE_PACKET, buf);
+        public record ComponentPayload(Component component, String packetType) implements CustomPacketPayload {
+            public static final Type<ComponentPayload> FISH_TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "fish_heal_packet"));
+            public static final Type<ComponentPayload> FEED_ANIMAL_TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "feed_animal_heal_packet"));
+            public static final Type<ComponentPayload> PET_TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "pet_heal_packet"));
+            public static final Type<ComponentPayload> NEARBY_BLOCK_TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "nearby_block_heal_packet"));
+            public static final Type<ComponentPayload> KILL_ENTITY_TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "kill_entity_heal_packet"));
+            public static final Type<ComponentPayload> BREAK_BLOCK_TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "break_block_heal_packet"));
+            public static final Type<ComponentPayload> PTSD_FORM_TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "ptsd_form_packet"));
+            public static final Type<ComponentPayload> PTSD_DISPERSE_TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "ptsd_disperse_packet"));
+            public static final Type<ComponentPayload> PTSD_REMISSION_TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "ptsd_remission_packet"));
+
+            public static final StreamCodec<RegistryFriendlyByteBuf, ComponentPayload> CODEC = StreamCodec.composite(
+                    ComponentSerialization.TRUSTED_STREAM_CODEC, ComponentPayload::component,
+                    ByteBufCodecs.STRING_UTF8, ComponentPayload::packetType,
+                    ComponentPayload::new
+            );
+
+            @Override
+            public Type<? extends CustomPacketPayload> type() {
+                return switch (packetType) {
+                    case "fish" -> FISH_TYPE;
+                    case "feed_animal" -> FEED_ANIMAL_TYPE;
+                    case "pet" -> PET_TYPE;
+                    case "nearby_block" -> NEARBY_BLOCK_TYPE;
+                    case "kill_entity" -> KILL_ENTITY_TYPE;
+                    case "break_block" -> BREAK_BLOCK_TYPE;
+                    case "ptsd_form" -> PTSD_FORM_TYPE;
+                    case "ptsd_disperse" -> PTSD_DISPERSE_TYPE;
+                    case "ptsd_remission" -> PTSD_REMISSION_TYPE;
+                    default -> throw new IllegalArgumentException("Unknown packet type: " + packetType);
+                };
+            }
+        }
+
+        public record EmptyPayload(String packetType) implements CustomPacketPayload {
+            public static final Type<EmptyPayload> LOOT_TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "loot_heal_packet"));
+            public static final Type<EmptyPayload> INSOMNIA_TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "insomnia_packet"));
+            public static final Type<EmptyPayload> MENTAL_FATIGUE_TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "mental_fatigue_packet"));
+
+            public static final StreamCodec<RegistryFriendlyByteBuf, EmptyPayload> CODEC = StreamCodec.composite(
+                    ByteBufCodecs.STRING_UTF8, EmptyPayload::packetType,
+                    EmptyPayload::new
+            );
+
+            @Override
+            public Type<? extends CustomPacketPayload> type() {
+                return switch (packetType) {
+                    case "loot" -> LOOT_TYPE;
+                    case "insomnia" -> INSOMNIA_TYPE;
+                    case "mental_fatigue" -> MENTAL_FATIGUE_TYPE;
+                    default -> throw new IllegalArgumentException("Unknown packet type: " + packetType);
+                };
+            }
+        }
+
+        // Send methods
+        public static void sendOverdosePacket(ServerPlayer player, int count) {
+            NetworkManager.sendToPlayer(player, new OverdosePayload(count));
+        }
+
+        public static void sendBipolarPacket(ServerPlayer player, boolean isMania) {
+            NetworkManager.sendToPlayer(player, new BipolarPayload(isMania));
+        }
+
+        public static void sendFishHealPacket(ServerPlayer player, Component id) {
+            NetworkManager.sendToPlayer(player, new ComponentPayload(id, "fish"));
+        }
+
+        public static void sendFeedAnimalHealPacket(ServerPlayer player, Component id) {
+            NetworkManager.sendToPlayer(player, new ComponentPayload(id, "feed_animal"));
+        }
+
+        public static void sendPetHealPacket(ServerPlayer player, Component id) {
+            NetworkManager.sendToPlayer(player, new ComponentPayload(id, "pet"));
+        }
+
+        public static void sendLootHealPacket(ServerPlayer player) {
+            NetworkManager.sendToPlayer(player, new EmptyPayload("loot"));
+        }
+
+        public static void sendNearbyBlockHealPacket(ServerPlayer player, Component id) {
+            NetworkManager.sendToPlayer(player, new ComponentPayload(id, "nearby_block"));
+        }
+
+        public static void sendKillEntityHealPacket(ServerPlayer player, Component id) {
+            NetworkManager.sendToPlayer(player, new ComponentPayload(id, "kill_entity"));
+        }
+
+        public static void sendBreakBlockHealPacket(ServerPlayer player, Component id) {
+            NetworkManager.sendToPlayer(player, new ComponentPayload(id, "break_block"));
+        }
+
+        public static void sendPTSDFormPacket(ServerPlayer player, Component id) {
+            NetworkManager.sendToPlayer(player, new ComponentPayload(id, "ptsd_form"));
+        }
+
+        public static void sendPTSDDispersePacket(ServerPlayer player, Component id) {
+            NetworkManager.sendToPlayer(player, new ComponentPayload(id, "ptsd_disperse"));
+        }
+
+        public static void sendPTSDRemissionPacket(ServerPlayer player, Component id) {
+            NetworkManager.sendToPlayer(player, new ComponentPayload(id, "ptsd_remission"));
+        }
+
+        public static void sendInsomniaPacket(ServerPlayer player) {
+            NetworkManager.sendToPlayer(player, new EmptyPayload("insomnia"));
+        }
+
+        public static void sendMentalFatiguePacket(ServerPlayer player) {
+            NetworkManager.sendToPlayer(player, new EmptyPayload("mental_fatigue"));
+        }
     }
-    public static void sendBipolarPacket(ServerPlayer player, boolean isMania) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeBoolean(isMania);
-        NetworkManager.sendToPlayer(player, BIPOLAR_PACKET, buf);
-    }
-    public static void sendFishHealPacket(ServerPlayer player, Component id) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeComponent(id);
-        NetworkManager.sendToPlayer(player, FISH_HEAL_PACKET, buf);
-    }
-    public static void sendFeedAnimalHealPacket(ServerPlayer player, Component id) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeComponent(id);
-        NetworkManager.sendToPlayer(player, FEED_ANIMAL_HEAL_PACKET, buf);
-    }
-    public static void sendPetHealPacket(ServerPlayer player, Component id) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeComponent(id);
-        NetworkManager.sendToPlayer(player, PET_HEAL_PACKET, buf);
-    }
-    public static void sendLootHealPacket(ServerPlayer player) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        NetworkManager.sendToPlayer(player, LOOT_HEAL_PACKET, buf);
-    }
-    public static void sendNearbyBlockHealPacket(ServerPlayer player, Component id) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeComponent(id);
-        NetworkManager.sendToPlayer(player, NEARBY_BLOCK_HEAL_PACKET, buf);
-    }
-    public static void sendKillEntityHealPacket(ServerPlayer player, Component id) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeComponent(id);
-        NetworkManager.sendToPlayer(player, KILL_ENTITY_HEAL_PACKET, buf);
-    }
-    public static void sendBreakBlockHealPacket(ServerPlayer player, Component id) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeComponent(id);
-        NetworkManager.sendToPlayer(player, BREAK_BLOCK_HEAL_PACKET, buf);
-    }
-    public static void sendPTSDFormPacket(ServerPlayer player, Component id) {
-        FriendlyByteBuf formBuf = new FriendlyByteBuf(Unpooled.buffer());
-        formBuf.writeComponent(id);
-        NetworkManager.sendToPlayer(player, PTSD_FROM_PACKET, formBuf);
-    }
-    public static void sendPTSDDispersePacket(ServerPlayer player, Component id) {
-        FriendlyByteBuf disperseBuf = new FriendlyByteBuf(Unpooled.buffer());
-        disperseBuf.writeComponent(id);
-        NetworkManager.sendToPlayer(player, PTSD_DISPERSE_PACKET, disperseBuf);
-    }
-    public static void sendPTSDRemissionPacket(ServerPlayer player, Component id) {
-        FriendlyByteBuf remissionBuf = new FriendlyByteBuf(Unpooled.buffer());
-        remissionBuf.writeComponent(id);
-        NetworkManager.sendToPlayer(player, PTSD_REMISSION_PACKET, remissionBuf);
-    }
-    public static void sendInsomniaPacket(ServerPlayer player) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        NetworkManager.sendToPlayer(player, INSOMNIA_PACKET, buf);
-    }
-    public static void sendMentalFatiguePacket(ServerPlayer player) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        NetworkManager.sendToPlayer(player, MENTAL_FATIGUE_PACKET, buf);
-    }
-}

@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MentalTraitInfoScreen extends UncloseableScreen {
-    public static final ResourceLocation FRAME = new ResourceLocation(Depression.MOD_ID, "textures/mental_trait/info_frame.png");
+    public static final ResourceLocation FRAME = ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "textures/mental_trait/info_frame.png");
     private final MentalTraitSelectionScreen screen;
     private TextButton returnButton;
     private TextButton confirmButton;
@@ -69,7 +69,7 @@ public class MentalTraitInfoScreen extends UncloseableScreen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        renderDirtBackground(guiGraphics);
+        renderBlurredBackground(partialTicks);
         Minecraft minecraft = Minecraft.getInstance();
         Window window = minecraft.getWindow();
         int x = window.getGuiScaledWidth() / 2;

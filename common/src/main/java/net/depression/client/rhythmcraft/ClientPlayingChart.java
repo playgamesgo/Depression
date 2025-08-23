@@ -16,7 +16,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.LerpingBossEvent;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -33,10 +32,10 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClientPlayingChart {
-    public static final ResourceLocation PAUSE = new ResourceLocation("depression", "textures/rc_screen/modifying/pause.png");
-    public static final ResourceLocation PLAYING = new ResourceLocation("depression", "textures/rc_screen/modifying/playing.png");
-    public static final ResourceLocation FORWARD = new ResourceLocation("depression", "textures/rc_screen/modifying/forward.png");
-    public static final ResourceLocation BACKWARD = new ResourceLocation("depression", "textures/rc_screen/modifying/backward.png");
+    public static final ResourceLocation PAUSE = ResourceLocation.fromNamespaceAndPath("depression", "textures/rc_screen/modifying/pause.png");
+    public static final ResourceLocation PLAYING = ResourceLocation.fromNamespaceAndPath("depression", "textures/rc_screen/modifying/playing.png");
+    public static final ResourceLocation FORWARD = ResourceLocation.fromNamespaceAndPath("depression", "textures/rc_screen/modifying/forward.png");
+    public static final ResourceLocation BACKWARD = ResourceLocation.fromNamespaceAndPath("depression", "textures/rc_screen/modifying/backward.png");
     public SongProgressSlider songProgressSlider;
     public OffsetButton pauseButton, forwardButton, backwardButton;
     public long spaceInTicks = 1;
@@ -46,6 +45,7 @@ public class ClientPlayingChart {
     public Song song;
     public Comparator<? super BlockPos> comparator;
     public boolean isPlaying;
+    public boolean isWaiting = true;
     public AtomicInteger score;
     public AtomicInteger combo;
     public BlockPos frontBlockPos;
@@ -119,9 +119,10 @@ public class ClientPlayingChart {
         });
     }
 
-    public static void receivePlaySongPacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void receivePlaySongPacket(RhythmCraftPacket.PlaySongPayload buf, NetworkManager.PacketContext packetContext) {
         ClientPlayingChart playingChart = DepressionClient.playingChart;
         playingChart.isPlaying = true;
+        playingChart.isWaiting = false;
         try {
             if (playingChart.isEditMode) {
                 playingChart.songProgressSlider = new SongProgressSlider(0.1, 0, 0.8, DepressionClient.oggStreamPlayer);
@@ -177,9 +178,9 @@ public class ClientPlayingChart {
         }
         DepressionClient.oggStreamPlayer.play();
     }
-    public static void receiveNoteChangePacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
-        BlockPos pos = buf.readBlockPos();
-        boolean isAdd = buf.readBoolean();
+    public static void receiveNoteChangePacket(RhythmCraftPacket.NoteChangedPayload buf, NetworkManager.PacketContext packetContext) {
+        BlockPos pos = buf.pos();
+        boolean isAdd = buf.isAdd();
         ClientPlayingChart playingChart = DepressionClient.playingChart;
         if (isAdd) {
             playingChart.renderNote(pos);
@@ -188,26 +189,26 @@ public class ClientPlayingChart {
             playingChart.highlightedNotes.remove(pos).setRemoved(Entity.RemovalReason.DISCARDED);
         }
     }
-    public static void receiveGameplayChangePacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void receiveGameplayChangePacket(RhythmCraftPacket.GameplayChangePayload buf, NetworkManager.PacketContext packetContext) {
         ClientPlayingChart playingChart = DepressionClient.playingChart;
-        playingChart.score.set(buf.readInt());
-        playingChart.combo.set(buf.readInt());
+        playingChart.score.set(buf.score());
+        playingChart.combo.set(buf.combo());
     }
-    public static void receiveTimeChangePacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void receiveTimeChangePacket(RhythmCraftPacket.TimeChangedPayload buf, NetworkManager.PacketContext packetContext) {
         ClientPlayingChart playingChart = DepressionClient.playingChart;
-        long time = buf.readLong();
+        long time = buf.tick();
         Minecraft.getInstance().execute(() -> {
             playingChart.isTimeFreeze = false;
             Minecraft.getInstance().level.setDayTime(time);
             playingChart.isTimeFreeze = true;
         });
     }
-    public static void receiveGameEndPacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void receiveGameEndPacket(RhythmCraftPacket.GameEndPayload buf, NetworkManager.PacketContext packetContext) {
         ClientPlayingChart playingChart = DepressionClient.playingChart;
         playingChart.isPlaying = false;
-        int score = buf.readInt();
-        int hits = buf.readInt();
-        int prevScore = buf.readInt();
+        int score = buf.score();
+        int hits = buf.hits();
+        int prevScore = buf.prevBest();
         String id = playingChart.song.id;
         int difficulty = playingChart.chart.difficulty;
         Minecraft minecraft = Minecraft.getInstance();
@@ -217,8 +218,8 @@ public class ClientPlayingChart {
         DepressionClient.rcProfile.newScore(id, difficulty, score);
     }
 
-    public static void receiveSpaceChangePacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void receiveSpaceChangePacket(RhythmCraftPacket.SpaceChangePayload buf, NetworkManager.PacketContext packetContext) {
         ClientPlayingChart playingChart = DepressionClient.playingChart;
-        playingChart.spaceInTicks = buf.readInt();
+        playingChart.spaceInTicks = buf.space();
     }
 }

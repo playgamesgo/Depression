@@ -1,25 +1,34 @@
 package net.depression.network;
 
 import dev.architectury.networking.NetworkManager;
-import io.netty.buffer.Unpooled;
 import net.depression.Depression;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.nio.charset.StandardCharsets;
-
 public class PlaySoundPacket {
-    public static final ResourceLocation PLAY_SOUND_PACKET = new ResourceLocation(Depression.MOD_ID, "play_sound_packet");
-    public static void sendToServer(String id) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeCharSequence(id, StandardCharsets.UTF_8);
-        NetworkManager.sendToServer(PLAY_SOUND_PACKET, buf);
+    public record PlaySoundPayload(String soundId) implements CustomPacketPayload {
+        public static final Type<PlaySoundPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "play_sound_packet"));
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, PlaySoundPayload> CODEC = StreamCodec.composite(
+                ByteBufCodecs.STRING_UTF8, PlaySoundPayload::soundId,
+                PlaySoundPayload::new
+        );
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
     }
 
-    public static void sendToPLayer(String id, ServerPlayer player) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeCharSequence(id, StandardCharsets.UTF_8);
-        NetworkManager.sendToPlayer(player, PLAY_SOUND_PACKET, buf);
+    public static void sendToServer(String soundId) {
+        NetworkManager.sendToServer(new PlaySoundPayload(soundId));
+    }
+
+    public static void sendToPlayer(ServerPlayer player, String soundId) {
+        NetworkManager.sendToPlayer(player, new PlaySoundPayload(soundId));
     }
 }

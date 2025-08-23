@@ -35,7 +35,7 @@ public class MinecraftMixin {
             }
         }
     }
-    @Inject(method = "clearLevel(Lnet/minecraft/client/gui/screens/Screen;)V", at = @At("HEAD"))
+    @Inject(method = "clearClientLevel", at = @At("HEAD"))
     private void onClearLevel(Screen screen, CallbackInfo ci) {
         OggStreamPlayer oggStreamPlayer = DepressionClient.oggStreamPlayer;
         oggStreamPlayer.stop();

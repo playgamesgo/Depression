@@ -5,9 +5,11 @@ import dev.architectury.networking.NetworkManager;
 import net.depression.mental.MentalStatus;
 import net.depression.mental.MentalTrait;
 import net.depression.network.DiaryUpdatePacket;
+import net.depression.network.MentalTraitPacket;
 import net.depression.rhythmcraft.PlayingChart;
 import net.depression.rhythmcraft.RhythmCraftProfile;
 import net.depression.world.ParticleFormulaInstance;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -17,11 +19,14 @@ import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.Filterable;
 import net.minecraft.server.network.ServerLoginPacketListenerImpl;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.WritableBookContent;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -90,8 +95,8 @@ public class Registry {
     public static boolean isPending(Player player) {
         return pendingPlayers.containsKey(player.getUUID());
     }
-    public static void receiveMentalTraitPacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
-        String id = buf.readCharSequence(buf.readableBytes(), DiaryUpdatePacket.charset).toString();
+    public static void receiveMentalTraitPacket(MentalTraitPacket.MentalTraitPayload buf, NetworkManager.PacketContext packetContext) {
+        String id = buf.id();
         Player player = packetContext.getPlayer();
         UUID uuid = player.getUUID();
         MentalStatus mentalStatus = Registry.mentalStatus.get(uuid);
@@ -116,29 +121,35 @@ public class Registry {
         diaryUpdateMap.put(player.getUUID(), diary);
         DiaryUpdatePacket.sendToPlayer(player);
     }
-    public static void receiveDiaryUpdatePacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void receiveDiaryUpdatePacket(DiaryUpdatePacket.DiaryUpdatePayload buf, NetworkManager.PacketContext packetContext) {
         ItemStack diary = diaryUpdateMap.get(packetContext.getPlayer().getUUID());
-        CharSequence rawContent = buf.readCharSequence(buf.readableBytes(), DiaryUpdatePacket.charset);
-        CompoundTag compoundTag = diary.getOrCreateTag();
-        ListTag oldPages = compoundTag.getList("pages", 8);
-        ListTag pages = new ListTag();
+        CharSequence rawContent = buf.content();
+
+        // Get existing pages using data components
+        List<Filterable<String>> existingPages = diary.getOrDefault(DataComponents.WRITABLE_BOOK_CONTENT, new WritableBookContent(List.of())).pages();
+        List<String> newPages = new ArrayList<>();
+
         StringBuilder pageContent = new StringBuilder();
         for (int i = 0; i < rawContent.length(); ++i) {
             char c = rawContent.charAt(i);
             if (c == '/') {
-                pages.add(StringTag.valueOf(pageContent.toString()));
+                newPages.add(pageContent.toString());
                 pageContent = new StringBuilder();
-            }
-            else {
+            } else {
                 pageContent.append(c);
             }
         }
-        pages.addAll(oldPages);
-        while (pages.size() > 100) {
-            pages.remove(pages.size()-1);
+
+        // Add existing pages
+        newPages.addAll(existingPages.stream().map(stringFilterable -> stringFilterable.get(true)).toList());
+
+        // Limit to 100 pages
+        while (newPages.size() > 100) {
+            newPages.remove(newPages.size() - 1);
         }
-        compoundTag.put("pages", pages);
-        diary.setTag(compoundTag);
+
+        // Update the diary with new content
+        diary.set(DataComponents.WRITABLE_BOOK_CONTENT, new WritableBookContent(newPages.stream().map(Filterable::passThrough).toList()));
         diaryUpdateMap.remove(packetContext.getPlayer().getUUID());
     }
 }

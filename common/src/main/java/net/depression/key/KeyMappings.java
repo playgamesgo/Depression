@@ -3,7 +3,6 @@ package net.depression.key;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.architectury.event.events.client.ClientTickEvent;
 import dev.architectury.registry.client.keymappings.KeyMappingRegistry;
-import net.depression.Depression;
 import net.depression.client.DepressionClient;
 import net.depression.network.RhythmCraftPacket;
 import net.depression.util.OggStreamPlayer;

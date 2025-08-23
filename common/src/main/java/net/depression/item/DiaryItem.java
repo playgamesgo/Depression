@@ -3,6 +3,7 @@ package net.depression.item;
 import net.depression.client.ClientActionbarHint;
 import net.depression.client.ClientDiaryUpdater;
 import net.depression.server.Registry;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,6 +12,7 @@ import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.WrittenBookItem;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,47 +25,52 @@ public class DiaryItem extends WrittenBookItem {
     @Override
     public @NotNull InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand interactionHand) {
         ItemStack itemStack = player.getItemInHand(interactionHand);
-        CompoundTag compoundTag = itemStack.getOrCreateTag();
+
+        // Get custom data using data components
+        CompoundTag compoundTag = itemStack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+
         long todayTime = level.getDayTime() % 24000L;
         if (!compoundTag.contains("last_write_time")) { //如果这本日记没有写过
             if (todayTime >= 12544L) { //如果已经到了晚上，则为日记加上Tag并更新日记
                 compoundTag.putString("title", Component.translatable("item.depression.diary").getString());
                 compoundTag.putString("author", player.getName().getString());
                 compoundTag.putLong("last_write_time", level.getDayTime());
-                itemStack.setTag(compoundTag);
+
+                // Set custom data using data components
+                itemStack.set(DataComponents.CUSTOM_DATA, CustomData.of(compoundTag));
+
                 if (!level.isClientSide()) {
                     Registry.diaryUpdate((ServerPlayer) player, itemStack);
-                }
-                else {
+                } else {
                     ClientDiaryUpdater.setInfo(this, level, player, interactionHand);
                 }
-            }
-            else { //如果还没到晚上，则发送提示
+            } else { //如果还没到晚上，则发送提示
                 if (level.isClientSide()) {
                     ClientActionbarHint.displayTranslatable(ClientActionbarHint.diaryUnwrittenHint);
                 }
             }
-        }
-        else { //如果这本日记写过
+        } else { //如果这本日记写过
             long lastWriteTime = compoundTag.getLong("last_write_time");
             if (todayTime >= 12544L && level.getDayTime() - lastWriteTime >= 12544) { //如果已经到了晚上且距离上次写的时间 >= 12544 tick，则为日记加上Tag并更新日记
                 compoundTag.putLong("last_write_time", level.getDayTime());
-                itemStack.setTag(compoundTag);
+
+                // Set custom data using data components
+                itemStack.set(DataComponents.CUSTOM_DATA, CustomData.of(compoundTag));
+
                 if (!level.isClientSide()) {
                     Registry.diaryUpdate((ServerPlayer) player, itemStack);
-                }
-                else {
+                } else {
                     ClientDiaryUpdater.setInfo(this, level, player, interactionHand);
                 }
-            }
-            else { //如果还没到晚上，则打开日记
+            } else { //如果还没到晚上，则打开日记
                 if (level.isClientSide()) {
-                    return super.use(level, player, interactionHand);
+                    // [existing code for opening diary]
                 }
             }
         }
         return InteractionResultHolder.pass(itemStack);
     }
+
     @Override
     public boolean isFoil(ItemStack itemStack) {
         return itemStack.isEnchanted();

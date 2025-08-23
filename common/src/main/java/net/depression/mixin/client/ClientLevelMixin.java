@@ -2,12 +2,8 @@ package net.depression.mixin.client;
 
 import net.depression.client.DepressionClient;
 import net.depression.client.rhythmcraft.ClientPlayingChart;
-import net.depression.mental.PTSDManager;
-import net.depression.network.PlaySoundPacket;
 import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -20,7 +16,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.ArrayList;
-import java.util.Collection;
 
 @Mixin(ClientLevel.class)
 public abstract class ClientLevelMixin {
@@ -60,14 +55,6 @@ public abstract class ClientLevelMixin {
     private void onChunkUnload(LevelChunk levelChunk, CallbackInfo ci) {
         if (DepressionClient.playingChart != null) {
             DepressionClient.playingChart.onChunkUnload(levelChunk.getPos());
-        }
-    }
-
-    @Inject(method = "playLocalSound", at = @At("HEAD"))
-    private void playLocalSound(double d, double e, double f, SoundEvent soundEvent, SoundSource soundSource, float g, float h, boolean bl, CallbackInfo ci) {
-        String id = soundEvent.getLocation().toString();
-        if (PTSDManager.soundEventMap.containsKey(id)) {
-            PlaySoundPacket.sendToServer(id);
         }
     }
 }

@@ -8,6 +8,7 @@ import net.depression.network.DiaryUpdatePacket;
 import net.depression.util.Tools;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.StringSplitter;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -15,15 +16,19 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.network.Filterable;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.WritableBookContent;
 import net.minecraft.world.level.Level;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Random;
+import java.util.List;
 
 
 public class ClientDiaryUpdater {
@@ -33,7 +38,7 @@ public class ClientDiaryUpdater {
     public static InteractionHand interactionHand;
     public static ItemStack curDiaryItem;
     public static Random random = new Random();
-    public static final ResourceLocation writeSound = new ResourceLocation( "assets/diary_sound/write_diary");
+    public static final ResourceLocation writeSound = ResourceLocation.parse("assets/diary_sound/write_diary");
 
     public static void clear() {
         diaryItem = null;
@@ -49,14 +54,14 @@ public class ClientDiaryUpdater {
         ClientDiaryUpdater.interactionHand = interactionHand;
     }
 
-    public static void receiveDiaryUpdatePacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void receiveDiaryUpdatePacket(DiaryUpdatePacket.DiaryUpdatePayload buf, NetworkManager.PacketContext packetContext) {
         if (Minecraft.getInstance().level == null) {
             return;
         }
         player = Minecraft.getInstance().player;
         level.playSeededSound(player, player.getX(), player.getY(), player.getZ(), SoundEvents.VILLAGER_WORK_CARTOGRAPHER, SoundSource.PLAYERS, 1.0F, 1.0F, random.nextLong());
         //解析文本
-        CharSequence rawContent = buf.readCharSequence(buf.readableBytes(), DiaryUpdatePacket.charset);
+        String rawContent = buf.content();
         StringBuilder content;
         boolean isMDD = false;
         if (DepressionClient.clientMentalStatus.mentalHealthId != 3) {
@@ -108,8 +113,10 @@ public class ClientDiaryUpdater {
         boolean isLatin = Component.translatable("diary.depression.is_latin").getString().equals("true");
 
         ItemStack itemStack = player.getItemInHand(interactionHand);
-        CompoundTag compoundTag = itemStack.getOrCreateTag();
-        ListTag listTag = new ListTag();
+
+        List<Filterable<String>> existingPages = itemStack.getOrDefault(DataComponents.WRITABLE_BOOK_CONTENT, new WritableBookContent(List.of())).pages();
+        List<Filterable<String>> newPages = new ArrayList<>();
+
         StringBuilder pageBuilder = new StringBuilder();
         StringBuilder sentToServerContent = new StringBuilder();
         StringSplitter splitter = ((FontAccess) Minecraft.getInstance().font).getSplitter();
@@ -135,27 +142,26 @@ public class ClientDiaryUpdater {
             text = text.substring(index);
             if (++line % 14 == 0) {
                 String pageText = pageBuilder.toString();
-                listTag.add(StringTag.valueOf(pageText));
+                newPages.add(Filterable.passThrough(pageText));
                 sentToServerContent.append(pageText);
                 sentToServerContent.append('/');
                 pageBuilder = new StringBuilder();
             }
         }
-        if (line % 14 != 0) { //如果最后一页不满14行
+        if (line % 14 != 0) {
             String pageText = pageBuilder.toString();
-            listTag.add(StringTag.valueOf(pageText));
+            newPages.add(Filterable.passThrough(pageText));
             sentToServerContent.append(pageText);
             sentToServerContent.append('/');
         }
 
         //加入新的内容
-        ListTag oldListTag = compoundTag.getList("pages", 8);
-        listTag.addAll(oldListTag);
-        compoundTag.put("pages", listTag);
-        itemStack.setTag(compoundTag);
-        //打开日记界面
+        newPages.addAll(existingPages);
+
+        // Update the diary with new content using data components
+        itemStack.set(DataComponents.WRITABLE_BOOK_CONTENT, new WritableBookContent(newPages));
+
         curDiaryItem = itemStack;
-        //向服务器发送更新
         DiaryUpdatePacket.sendToServer(sentToServerContent.toString());
     }
 }

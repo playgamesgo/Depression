@@ -5,18 +5,13 @@ import net.depression.Depression;
 import net.depression.mental.MentalTrait;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.OptionsList;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FormattedCharSequence;
 
-import java.awt.*;
 import java.util.ArrayList;
 
 public class MentalTraitSelectionScreen extends UncloseableScreen {
-    public static final ResourceLocation FRAME = new ResourceLocation(Depression.MOD_ID, "textures/mental_trait/frame_128.png");
+    public static final ResourceLocation FRAME = ResourceLocation.fromNamespaceAndPath(Depression.MOD_ID, "textures/mental_trait/frame_128.png");
     public static final int frameLength = 148;
     public static final int halfFrameLength = 74;
     public final int screenHeight = 128;
@@ -45,16 +40,17 @@ public class MentalTraitSelectionScreen extends UncloseableScreen {
         addRenderableWidget(sliderButton);
     }
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        sliderButton.mouseScrolled(delta);
+    public boolean mouseScrolled(double d, double e, double f, double g) {
+        sliderButton.mouseScrolled(g);
         return true;
     }
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         setSlider();
-        renderDirtBackground(guiGraphics);
+        renderBlurredBackground(partialTicks);
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         Minecraft minecraft = Minecraft.getInstance();
+        minecraft.options.menuBackgroundBlurriness().set(0);
         Window window = minecraft.getWindow();
         int x = window.getGuiScaledWidth() / 2;
         int y = window.getGuiScaledHeight() / 2;

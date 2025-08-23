@@ -1,15 +1,14 @@
 package net.depression.mental;
 
 import dev.architectury.networking.NetworkManager;
-import net.depression.client.ClientMentalStatus;
 import net.depression.mixin.MobAccess;
 import net.depression.network.ActionbarHintPacket;
 import net.depression.network.PTSDOnsetPacket;
+import net.depression.network.RhythmCraftPacket;
 import net.depression.server.Registry;
 import net.depression.sound.ModSounds;
 import net.depression.util.TempValues;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -17,9 +16,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.item.SpawnEggItem;
 
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -53,7 +50,7 @@ public class PTSDManager {
     public static void addEntry(String damageSource, String soundEvent) {
         soundEventMap.computeIfAbsent(soundEvent, k -> new ArrayList<>()).add(damageSource);
         damageSourceMap.computeIfAbsent(damageSource, k -> new ArrayList<>())
-                .add(SoundEvent.createVariableRangeEvent(new ResourceLocation(soundEvent)));
+                .add(SoundEvent.createVariableRangeEvent(ResourceLocation.parse(soundEvent)));
     }
 
     public synchronized void tick(ServerPlayer player) { //每秒调用一次
@@ -252,9 +249,9 @@ public class PTSDManager {
         }
     }
 
-    public static void receivePlaySoundPacket(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void receivePlaySoundPacket(RhythmCraftPacket.PlaySongPayload buf, NetworkManager.PacketContext packetContext) {
         PTSDManager manager = Registry.mentalStatus.get(packetContext.getPlayer().getUUID()).ptsdManager;
-        String soundEvent = buf.readCharSequence(buf.readableBytes(), StandardCharsets.UTF_8).toString();
+        String soundEvent = buf.id();
         for (String damageSource : soundEventMap.get(soundEvent)) {
             manager.trigger(damageSource);
         }

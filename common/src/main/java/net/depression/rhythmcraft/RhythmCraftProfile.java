@@ -4,11 +4,9 @@ import dev.architectury.networking.NetworkManager;
 import net.depression.network.RhythmCraftPacket;
 import net.depression.server.Registry;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class RhythmCraftProfile {
@@ -105,31 +103,29 @@ public class RhythmCraftProfile {
         }
         return profile;
     }
-    public static void onReceiveRequest(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void onReceiveRequest(RhythmCraftPacket.ProfileRequestPayload buf, NetworkManager.PacketContext packetContext) {
         ServerPlayer player = (ServerPlayer) packetContext.getPlayer();
         RhythmCraftProfile profile = getProfileByServerPlayer(player);
         RhythmCraftPacket.sendProfileS2C(profile, player);
     }
-    public static void onReceiveProfileUpdate(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void onReceiveProfileUpdate(RhythmCraftPacket.ProfileUpdatePayload buf, NetworkManager.PacketContext packetContext) {
         Player player = packetContext.getPlayer();
         RhythmCraftProfile profile = getProfileByServerPlayer(player);
-        int stringSize = buf.readInt();
-        ProfileDataType type = ProfileDataType.valueOf(buf.readCharSequence(stringSize, StandardCharsets.UTF_8).toString());
+        ProfileDataType type = ProfileDataType.valueOf(buf.dataType());
         switch (type) {
             case SORT_TYPE:
-                profile.sortType = SongSortType.valueOf(buf.readCharSequence(buf.readableBytes(), StandardCharsets.UTF_8).toString());
+                profile.sortType = SongSortType.valueOf(buf.dataType());
                 break;
             case DIFFICULTY:
-                profile.difficulty = buf.readInt();
+                profile.difficulty = buf.difficulty();
                 break;
             case INDEX:
-                profile.index = buf.readInt();
+                profile.index = buf.index();
                 break;
             case CHART_SCORE:
-                stringSize = buf.readInt();
-                String songId = buf.readCharSequence(stringSize, StandardCharsets.UTF_8).toString();
-                int difficulty = buf.readInt();
-                int score = buf.readInt();
+                String songId = buf.chartKey();
+                int difficulty = buf.difficulty();
+                int score = buf.scores().get(0);
                 profile.newScore(songId, difficulty, score);
                 break;
         }

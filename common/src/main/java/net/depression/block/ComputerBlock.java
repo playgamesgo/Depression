@@ -1,5 +1,6 @@
 package net.depression.block;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -16,10 +17,16 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 
 public class ComputerBlock extends HorizontalDirectionalBlock {
-    public ComputerBlock() {
-        super(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).forceSolidOn().noOcclusion());
-        this.registerDefaultState(this.getStateDefinition().any().setValue(FACING, Direction.NORTH));
+    public static final MapCodec<ComputerBlock> CODEC = simpleCodec(ComputerBlock::new);
 
+    public ComputerBlock(BlockBehaviour.Properties properties) {
+        super(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).forceSolidOn().noOcclusion());
+        this.registerDefaultState(this.getStateDefinition().any().setValue(FACING, Direction.NORTH));
+    }
+
+    public ComputerBlock() {
+        super(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).forceSolidOn().noOcclusion());
+        this.registerDefaultState(this.getStateDefinition().any().setValue(FACING, Direction.NORTH));
     }
 
     @Override
@@ -64,4 +71,8 @@ public class ComputerBlock extends HorizontalDirectionalBlock {
             Block.box(9, 0, 1, 15, 15, 15)
     );
 
+    @Override
+    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
+        return CODEC;
+    }
 }

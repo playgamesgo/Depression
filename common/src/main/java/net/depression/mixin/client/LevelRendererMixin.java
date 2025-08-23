@@ -1,25 +1,16 @@
 package net.depression.mixin.client;
 
-import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.depression.client.ClientPTSDManager;
-import net.depression.client.DepressionClient;
-import net.depression.client.rhythmcraft.ClientPlayingChart;
-import net.depression.rhythmcraft.PlayingChart;
 import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.*;
-import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.client.renderer.entity.ShulkerRenderer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.FastColor;
-import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.level.LightLayer;
-import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -28,9 +19,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererMixin {
@@ -46,7 +35,7 @@ public abstract class LevelRendererMixin {
 
     @Shadow @Final private Minecraft minecraft;
     @Inject(method = "renderLevel", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/multiplayer/ClientLevel;entitiesForRendering()Ljava/lang/Iterable;"))
-    private void renderFalseEntities(PoseStack poseStack, float f, long l, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f matrix4f, CallbackInfo ci) {
+    private void renderFalseEntities(DeltaTracker deltaTracker, boolean bl, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f matrix4f, Matrix4f matrix4f2, CallbackInfo ci) {
         if (level == null) {
             return;
         }
@@ -59,6 +48,7 @@ public abstract class LevelRendererMixin {
             ClientPTSDManager.falseEntities.get(dimensionType).forEach(pair -> {
                 Entity entity = pair.getFirst();
                 BlockPos blockPos = entity.blockPosition();
+                PoseStack poseStack = new PoseStack();
                 entityRenderDispatcher.render(entity, entity.getX() - d, entity.getY() - e, entity.getZ() - g, entity.getYRot(), 0, poseStack, renderBuffers.bufferSource(),
                         LightTexture.pack(entity.isOnFire() ? 15 : level.getBrightness(LightLayer.BLOCK, blockPos), level.getBrightness(LightLayer.SKY, blockPos)));
             });

@@ -7,8 +7,6 @@ import com.mojang.serialization.Lifecycle;
 import dev.architectury.event.EventResult;
 import dev.architectury.networking.NetworkManager;
 import dev.architectury.platform.Platform;
-import net.depression.Depression;
-import net.depression.listener.TickEventListener;
 import net.depression.mental.MentalStatus;
 import net.depression.mixin.rhythmcraft.PlayerListAccessor;
 import net.depression.mixin.rhythmcraft.PrimaryLevelDataAccessor;
@@ -18,14 +16,9 @@ import net.depression.world.dimension.ModDimensions;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.nbt.*;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.commands.TimeCommand;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.progress.ChunkProgressListener;
@@ -33,21 +26,16 @@ import net.minecraft.util.ProgressListener;
 import net.minecraft.world.RandomSequences;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.CommandBlock;
-import net.minecraft.world.level.block.DetectorRailBlock;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
-import net.minecraft.world.level.storage.DerivedLevelData;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.level.storage.WorldData;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executor;
@@ -112,7 +100,7 @@ public class PlayingChart extends ServerLevel {
         player.lookAt(EntityAnchorArgument.Anchor.EYES, eyePos.add(direction.getX(), direction.getY(), direction.getZ()));
 
         levelFile = Platform.getGameFolder().resolve("rc_charts/" + chart.song.id + "/" + chart.levelPath + "/level.dat").toFile();
-        CompoundTag playerTag = NbtIo.readCompressed(levelFile).getCompound("Data").getCompound("Player");
+        CompoundTag playerTag = NbtIo.readCompressed(levelFile.toPath(), NbtAccounter.unlimitedHeap()).getCompound("Data").getCompound("Player");
         ListTag inventoryTag = playerTag.getList("Inventory", 10);
         player.getInventory().load(inventoryTag);
 
@@ -251,6 +239,7 @@ public class PlayingChart extends ServerLevel {
                     mentalStatus.mentalHeal("rhythmcraft", mentalHealValue);
                 }
                 RhythmCraftPacket.sendGameEnd(player, (int) Math.round(score), scoreInt, prevScore);
+
                 profile.newScore(chart.song.id, chart.difficulty, (int) Math.round(score));
                 isEnded = true;
             }
@@ -263,19 +252,19 @@ public class PlayingChart extends ServerLevel {
             super.save(progressListener, bl, bl2);
             chart.save();
             try {
-                CompoundTag levelTag = NbtIo.readCompressed(levelFile);
+                CompoundTag levelTag = NbtIo.readCompressed(levelFile.toPath(), NbtAccounter.unlimitedHeap());
                 levelTag.getCompound("Data").put("Player", player.saveWithoutId(new CompoundTag()));
-                NbtIo.writeCompressed(levelTag, levelFile);
+                NbtIo.writeCompressed(levelTag, levelFile.toPath());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
     }
 
-    public static void onReceiveReadChart(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
-        String songId = buf.readCharSequence(buf.readInt(), StandardCharsets.UTF_8).toString();
-        int difficulty = buf.readInt();
-        boolean isEditMode = buf.readBoolean();
+    public static void onReceiveReadChart(RhythmCraftPacket.ReadChartPayload buf, NetworkManager.PacketContext packetContext) {
+        String songId = buf.songId();
+        int difficulty = buf.difficulty();
+        boolean isEditMode = buf.isEditMode();
         ServerPlayer player = (ServerPlayer) packetContext.getPlayer();
         if (isEditMode) {
             if (player.hasPermissions(2)) {
@@ -313,7 +302,7 @@ public class PlayingChart extends ServerLevel {
                 }
         );
     }
-    public static void onReceiveReady(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void onReceiveReady(RhythmCraftPacket.ReadyPayload buf, NetworkManager.PacketContext packetContext) {
         ServerPlayer player = (ServerPlayer) packetContext.getPlayer();
         player.server.execute(
                 () -> {
@@ -325,7 +314,7 @@ public class PlayingChart extends ServerLevel {
                 }
         );
     }
-    public static void onReceiveLoadBack(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void onReceiveLoadBack(RhythmCraftPacket.LoadBackPayload buf, NetworkManager.PacketContext packetContext) {
         ServerPlayer player = (ServerPlayer) packetContext.getPlayer();
         player.server.execute(
                 () -> {
@@ -347,9 +336,9 @@ public class PlayingChart extends ServerLevel {
         );
     }
 
-    public static void onReceivePauseChange(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void onReceivePauseChange(RhythmCraftPacket.PauseChangedPayload buf, NetworkManager.PacketContext packetContext) {
         PlayingChart playingChart = PlayingChart.playingCharts.get(packetContext.getPlayer().getUUID());
-        long tick = buf.readLong();
+        long tick = buf.tick();
         playingChart.isPaused = !playingChart.isPaused;
         playingChart.player.server.execute(() -> {
             if (playingChart.isPaused) {
@@ -361,9 +350,9 @@ public class PlayingChart extends ServerLevel {
             }
         });
     }
-    public static void onReceiveProgressChange(FriendlyByteBuf buf, NetworkManager.PacketContext packetContext) {
+    public static void onReceiveProgressChange(RhythmCraftPacket.ProgressChangedPayload buf, NetworkManager.PacketContext packetContext) {
         PlayingChart playingChart = PlayingChart.playingCharts.get(packetContext.getPlayer().getUUID());
-        long tick = buf.readLong();
+        long tick = buf.tick();
         playingChart.tickCount = tick;
         playingChart.seek(tick);
     }
