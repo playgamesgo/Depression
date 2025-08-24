@@ -14,20 +14,23 @@ public class RhythmCraftProfile {
     public SongSortType sortType = SongSortType.DIFFICULTY;
     public int difficulty = 1;
     public int index = 0;
+
     public void newScore(String id, int difficulty, int score) {
-        ArrayList<Integer> scores = chartScores.get(id);
-        if (scores != null && scores.get(difficulty) >= score) {
+        ArrayList<Integer> scores = chartScores.computeIfAbsent(id, k -> new ArrayList<>());
+
+        // Ensure the list is large enough before checking existing score
+        while (scores.size() <= difficulty) {
+            scores.add(0); // Add default score of 0
+        }
+
+        // Now safely check if existing score is better
+        if (scores.get(difficulty) >= score) {
             return;
         }
-        if (scores == null) {
-            scores = new ArrayList<>();
-            chartScores.put(id, scores);
-        }
-        while (scores.size() <= difficulty) { //确保数组足够长
-            scores.add(0);
-        }
+
         scores.set(difficulty, score);
     }
+
     public void readNbt(CompoundTag tag) {
         CompoundTag profile = tag.getCompound("rc_profile");
 

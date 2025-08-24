@@ -21,6 +21,9 @@
     ],
     "client": [
       "net.depression.fabric.client.DepressionFabricClient"
+    ],
+    "server": [
+      "net.depression.fabric.DepressionFabricDedicated"
     ]
   },
   "mixins": [
